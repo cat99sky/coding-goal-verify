@@ -25,11 +25,13 @@ export function formatCents(cents) {
 /**
  * Apply a rate expressed in basis points (1 bp = 0.01%) to integer cents.
  * Contract: result is rounded half away from zero, for either sign.
+ * basisPoints must be a safe integer between 0 and 10000 inclusive (0%-100%);
+ * rates above 100% are rejected with a TypeError.
  */
 export function applyRate(cents, basisPoints) {
   if (!Number.isSafeInteger(cents)) throw new TypeError('cents must be a safe integer');
-  if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {
-    throw new TypeError('basisPoints must be a non-negative safe integer');
+  if (!Number.isSafeInteger(basisPoints) || basisPoints < 0 || basisPoints > 10000) {
+    throw new TypeError('basisPoints must be a safe integer between 0 and 10000');
   }
   const numerator = cents * basisPoints;
   const magnitude = Math.floor((Math.abs(numerator) * 2 + 10000) / 20000);
