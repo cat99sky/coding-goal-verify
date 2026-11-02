@@ -15,6 +15,12 @@ test('applyRate rounds a positive amount', () => {
   assert.equal(applyRate(101, 500), 5);
 });
 
+test('applyRate accepts 100% and rejects rates above 100%', () => {
+  assert.equal(applyRate(100, 10000), 100);
+  assert.throws(() => applyRate(100, 10001), TypeError);
+  assert.throws(() => applyRate(100, 20000), TypeError);
+});
+
 test('allocate splits a simple total', () => {
   assert.deepEqual(allocate(1000, [1, 1]).shares, [500, 500]);
   assert.deepEqual(allocate(1000, [2, 1]).shares, [667, 333]);

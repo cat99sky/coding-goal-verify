@@ -52,6 +52,9 @@ check('applyRate', 'just above half negative', applyRate(-151, 500), -8);
 check('applyRate', 'zero rate', applyRate(12345, 0), 0);
 checkThrows('applyRate', 'rejects fractional basis points', () => applyRate(100, 12.5));
 checkThrows('applyRate', 'rejects negative basis points', () => applyRate(100, -1));
+check('applyRate', 'accepts 100% rate', applyRate(100, 10000), 100);
+checkThrows('applyRate', 'rejects rate just above 100%', () => applyRate(100, 10001));
+checkThrows('applyRate', 'rejects rate far above 100%', () => applyRate(100, 20000));
 
 // --- group 3: allocate sums exactly and ranks remainders -------------------
 check('allocate', 'even split', allocate(1000, [1, 1]).shares, [500, 500]);
