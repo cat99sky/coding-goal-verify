@@ -2,14 +2,8 @@
 //
 // Integer cents only. No floating point money in the public API.
 //
-// DEFECT 1 (planted): applyRate() uses Math.floor, so refunds (negative
-// amounts) and non-exact fractional cents are rounded toward negative
-// infinity. The documented contract is "round half away from zero".
-//
-// DEFECT 2 (planted): allocate() pushes the whole remainder onto the last
-// line and ignores the fractional ranking, so a remainder larger than one
-// cent is misassigned and the documented "largest remainder first, ties to
-// the earlier line" rule is not honored.
+// applyRate() rounds half away from zero for both signs.
+// allocate() uses largest-remainder allocation with ties to the earlier line.
 
 /** Convert a dollar string such as "12.34" into integer cents. */
 export function parseCents(text) {
@@ -40,7 +34,10 @@ export function applyRate(cents, basisPoints) {
   if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {
     throw new TypeError('basisPoints must be a non-negative safe integer');
   }
-  return Math.floor((cents * basisPoints) / 10000);
+  const numerator = cents * basisPoints;
+  const magnitude = Math.abs(numerator);
+  const rounded = Math.floor((magnitude * 2 + 10000) / 20000);
+  return numerator < 0 ? -rounded : rounded;
 }
 
 /**
@@ -60,9 +57,13 @@ export function allocate(totalCents, weights) {
   }
   const totalWeight = weights.reduce((sum, value) => sum + value, 0);
   const shares = weights.map((weight) => Math.floor((totalCents * weight) / totalWeight));
-  let assigned = shares.reduce((sum, value) => sum + value, 0);
-  const remainder = totalCents - assigned;
-  shares[shares.length - 1] += remainder;
-  assigned += remainder;
+  const remainders = weights.map((weight) => (totalCents * weight) % totalWeight);
+  const assignedBase = shares.reduce((sum, value) => sum + value, 0);
+  const remainder = totalCents - assignedBase;
+  const order = weights
+    .map((_, index) => index)
+    .sort((a, b) => remainders[b] - remainders[a] || a - b);
+  for (let i = 0; i < remainder; i += 1) shares[order[i]] += 1;
+  const assigned = shares.reduce((sum, value) => sum + value, 0);
   return { shares, assigned };
 }
