@@ -1,0 +1,50 @@
+{
+  "goalId": "GOAL-VERIFY-09",
+  "stepId": "S-1",
+  "round": 2,
+  "taskRevision": 2,
+  "reviewerOperationId": "review:GOAL-VERIFY-09:r2:i8dd3b03a-0d55-4bfe-b8e7-bdd06cac76c2:v2",
+  "candidateDigest": "8607de1e1ae7c1a8036ac816833a56adf3c2628c1872137ff055e771511624ed",
+  "verdict": "PASS",
+  "reviewerModel": "deepseek/deepseek-flash",
+  "reviewerProvider": "deepseek",
+  "defects": [
+    {
+      "id": "D-01-01",
+      "status": "resolved",
+      "verifiedOn": "8607de1e1ae7c1a8036ac816833a56adf3c2628c1872137ff055e771511624ed",
+      "location": "src/invoice.mjs applyRate (guard on basisPoints)",
+      "trigger": "applyRate(cents, basisPoints) called with basisPoints > 10000 (rate above 100%), e.g. applyRate(100, 10001) or applyRate(100, 20000)",
+      "impact": "No longer applicable: rates above 100% are now rejected with a TypeError, so invalid rates cannot be silently applied.",
+      "repro": "node --input-type=module -e \"import {applyRate} from '<candidate>/src/invoice.mjs'; applyRate(100,10001)\"",
+      "evidence": [
+        "Candidate object src/invoice.mjs contains: if (!Number.isSafeInteger(basisPoints) || basisPoints < 0 || basisPoints > 10000) { throw new TypeError('basisPoints must be a safe integer between 0 and 10000'); }",
+        "node --input-type=module -e using candidate tree: 100 10001 => THROW TypeError basisPoints must be a safe integer between 0 and 10000",
+        "100 20000 => THROW TypeError basisPoints must be a safe integer between 0 and 10000",
+        "100000 10001 => THROW TypeError basisPoints must be a safe integer between 0 and 10000",
+        "100 10000 => 100 (boundary 100% still accepted)",
+        "tools/accept.mjs now asserts rejects rate just above 100% / rejects rate far above 100%; gate output: accept: PASS (430 assertions), exit=0",
+        "review-evidence/r2/evidence.txt"
+      ]
+    }
+  ],
+  "coverage": {
+    "reviewed": [
+      "src/invoice.mjs applyRate: half-away-from-zero rounding verified for both signs against tools/accept.mjs expectations (150->8, 149->7, -150->-8, -149->-7); AC1 satisfied",
+      "src/invoice.mjs applyRate: basisPoints > 10000 now throws TypeError, 10000 accepted; AC5 satisfied",
+      "src/invoice.mjs allocate: verified exact sum to totalCents across multiple totals ([7,11,13,101,999] all true) and largest-remainder ordering with ties to the earlier line (allocate(100,[1,1,1]).shares => [34,33,33], allocate(1000,[2,1]) => [667,333]); AC2 satisfied",
+      "tools/accept.mjs and test/invoice.test.mjs: diff vs baseline b76a25c shows only additive checks (+3 accept assertions, +1 test); gate strengthened, not weakened; AC3 satisfied",
+      "Package scripts: `npm test` => `node --test test/*.test.mjs`, `npm run accept` => `node tools/accept.mjs`; both run on candidate tree with exit 0",
+      "tools/accept.mjs: gate runs 430 assertions and exits 0 on candidate; AC4 satisfied",
+      "Tool-candidate repo has no other source modules besides src/invoice.mjs; README.md and package.json are non-behavioral (no acceptance-relevant logic) — no further acceptance-related scope"
+    ],
+    "unreviewed": [],
+    "blockers": []
+  },
+  "interpretations": [],
+  "handoff": {
+    "conclusion": "AC1 (half-away-from-zero, both signs), AC2 (largest-remainder allocation, ties to earlier line), AC3 (accept/test not weakened; changes are purely additive), AC4 (candidate commit f4b431c on task branch, acceptance command exits 0) and AC5 (applyRate rejects basisPoints > 10000 with TypeError; 10000 still accepted) are all satisfied. D-01-01 is resolved on candidate digest 8607de1e...: applyRate(100,10001), applyRate(100,20000) and applyRate(100000,10001) all throw TypeError, while applyRate(100,10000) => 100. Verdict PASS.",
+    "next": "No further work required; merge/hand off the candidate branch.",
+    "open": []
+  }
+}
