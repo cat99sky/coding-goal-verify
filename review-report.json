@@ -1,0 +1,38 @@
+{
+  "goalId": "GOAL-VERIFY-10",
+  "stepId": "S-1",
+  "round": 1,
+  "taskRevision": 1,
+  "reviewerOperationId": "review:GOAL-VERIFY-10:r1:i6a7663ce-08c4-484d-abd6-076e7bec3a6a:v1",
+  "reviewerModel": "deepseek/deepseek-flash",
+  "reviewerProvider": "deepseek",
+  "candidateDigest": "ff43ef1abd6d2242c39f115be49eddbdd2064c6b48510aa2d995fb0470a4e4ba",
+  "verdict": "PASS",
+  "defects": [],
+  "coverage": {
+    "reviewed": [
+      "src/invoice.mjs (candidate blob 4261f3269d451a613e9319b791911f11a98b44e9, sha256 c8d38b38ca62aea831bd8fbc25a1c3689536a9dbade1cf255daf847548f6a73b, 3177 bytes): full source read from the candidate git object; applyRate and allocate logic audited against the documented contract.",
+      "AC1 applyRate half-away-from-zero: the implementation computes abs(numerator), rounds via floor((magnitude*2+10000)/20000) in integer arithmetic, then re-applies sign. Exhaustive sweep of cents in [-2000,2000] x basisPoints in {0,1,2,3,5,50,125,250,333,500,750,825,1000,1234} found 0 mismatches versus exact half-away-from-zero. Spot checks: applyRate(150,500)=8, applyRate(-150,500)=-8, applyRate(250,100)=3, applyRate(-250,100)=-3, applyRate(-149,500)=-7, applyRate(-151,500)=-8. Evidence: review-evidence/property-checks.log.",
+      "AC2 allocate sum-and-ranking: shares are floor(total*w/totalWeight); remainders read from the exact integer remainder (total*w)%totalWeight; indices sorted by descending remainder with ascending-index tie-break; the 'remainder' cents handed out one each in that order. 5000 randomized cases (1-9 lines, weights 1-60, totals 0-500000) matched a brute-force reference of the same rule exactly (0 failures) and always summed to totalCents. Tie cases allocate(100,[1,1,1])=[34,33,33], allocate(10,[1,2,3])=[2,3,5], allocate(100,[1,1,1,1,1,1])=[17,17,17,17,16,16]. Evidence: review-evidence/property-checks.log.",
+      "AC3 gate not weakened: `git diff --name-status b76a25c a522d80` reports exactly one changed path, M src/invoice.mjs; `git diff b76a25c a522d80 -- tools test` produced 0 lines of diff. tools/accept.mjs sha256 e7c9031d075b3ac39a5be1df3801e05a09559bc294e8c205849da951b160fca7 and test/invoice.test.mjs sha256 61e411a515c6576cfec1a09837284be1d85874e68fbb99ca6922615eccf967d9 are byte-identical to the baseline. Evidence: review-evidence/protected-files.log.",
+      "AC4 acceptance command on the candidate commit: checked out candidate tree in a detached worktree and ran `node tools/accept.mjs` -> 'accept: PASS (427 assertions)', exit 0. The same command on baseline b76a25c fails with 6 contract violations (expected behaviour), confirming the gate is live and the fix is what makes it pass. Evidence: review-evidence/gate.log.",
+      "Unit suite: npm is not installed in this sandbox (npm test -> exit 127), so the package.json test script body was run directly: `node --test test/*.test.mjs` -> 3 tests, 3 pass, 0 fail, exit 0. Evidence: review-evidence/gate.log.",
+      "tools/check-candidate.mjs, package.json, README.md, .gitignore: unchanged by the candidate (git diff lists only src/invoice.mjs) and not part of the acceptance contract; the acceptance gate is executed directly, so the network-dependent candidate runner is irrelevant to this verdict.",
+      "parseCents/formatCents: untouched by the candidate diff and exercised by the passing accept groups 1 and the unit suite."
+    ],
+    "unreviewed": [],
+    "blockers": []
+  },
+  "interpretations": [
+    {
+      "source": "authoritative acceptance criteria (GOAL-VERIFY-10 taskRevision=1)",
+      "status": "confirmed",
+      "text": "applyRate rounds half away from zero for both positive and negative cents; allocate returns shares summing exactly to totalCents with remainder cents assigned to the largest fractional remainders, ties to the earlier line; tools/accept.mjs and test/ must be unchanged; the repository acceptance command must pass on the candidate commit."
+    }
+  ],
+  "handoff": {
+    "conclusion": "PASS. Candidate a522d80555b6eaf6cc7c96ca6a7be7edb141310a fixes both planted defects in src/invoice.mjs only: applyRate now rounds half away from zero symmetrically for both signs, and allocate distributes remainder cents by largest fractional remainder with ties to the earlier line and always sums to totalCents. tools/accept.mjs and test/invoice.test.mjs are byte-identical to baseline. `node tools/accept.mjs` exits 0 with 'accept: PASS (427 assertions)' on the candidate tree, and the unit suite passes 3/3.",
+    "next": "Merge the candidate branch warren/run_m7dvnp0698tz; no further changes required.",
+    "open": []
+  }
+}
