@@ -1,0 +1,11 @@
+{
+  "name": "coding-goal-verify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Isolated fixture repo for the DSH goal-mode + Coding closed-loop verification",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "accept": "node tools/accept.mjs"
+  }
+}
