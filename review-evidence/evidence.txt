@@ -1,0 +1,54 @@
+## candidate identity
+306fdf96185088056e13b22f280ae7e456db668c
+49d99073b235a4f90b1e8cb0736d3de308f40b15
+## accept.mjs vs baseline b76a25c
+e7c9031d075b3ac39a5be1df3801e05a09559bc294e8c205849da951b160fca7  -
+e7c9031d075b3ac39a5be1df3801e05a09559bc294e8c205849da951b160fca7  -
+## test/invoice.test.mjs vs baseline
+3bcc542cae65757b7fb35ccf0601f632931c3e9f75c6e626429838232516e140  -
+61e411a515c6576cfec1a09837284be1d85874e68fbb99ca6922615eccf967d9  -
+## diff baseline..candidate (names+stat)
+ src/invoice.mjs       | 40 +++++++++++++++++++++++++++++++---------
+ test/invoice.test.mjs |  7 +++++++
+ 2 files changed, 38 insertions(+), 9 deletions(-)
+## diff baseline..candidate test file (only added test)
+diff --git a/test/invoice.test.mjs b/test/invoice.test.mjs
+index cd62af6..d7f73b8 100644
+--- a/test/invoice.test.mjs
++++ b/test/invoice.test.mjs
+@@ -15,6 +15,13 @@ test('applyRate rounds a positive amount', () => {
+   assert.equal(applyRate(101, 500), 5);
+ });
+ 
++test('applyRate rejects out-of-range basis points', () => {
++  assert.equal(applyRate(10000, 10000), 10000);
++  assert.throws(() => applyRate(100, 10001), TypeError);
++  assert.throws(() => applyRate(1000, 15000), TypeError);
++  assert.throws(() => applyRate(100, 1000000), TypeError);
++});
++
+ test('allocate splits a simple total', () => {
+   assert.deepEqual(allocate(1000, [1, 1]).shares, [500, 500]);
+   assert.deepEqual(allocate(1000, [2, 1]).shares, [667, 333]);
+## applyRate guard lines
+export function applyRate(cents, basisPoints) {
+  if (!Number.isSafeInteger(cents)) throw new TypeError('cents must be a safe integer');
+  if (!Number.isSafeInteger(basisPoints) || basisPoints < 0 || basisPoints > 10000) {
+    throw new TypeError('basisPoints must be a safe integer between 0 and 10000');
+  }
+  const product = cents * basisPoints;
+  const magnitude = BigInt(Math.abs(product));
+  // Round half away from zero using integer arithmetic, then restore the sign.
+  const rounded = Number((magnitude + 5000n) / 10000n);
+  return product < 0 ? -rounded : rounded;
+}
+## gate
+accept: PASS (427 assertions)
+exit=0
+## unit
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 110.946329
