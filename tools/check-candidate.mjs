@@ -122,10 +122,10 @@ async function main() {
     stderr,
   };
   realLog(JSON.stringify(result, null, 2));
-  realExit(exitCode === 0 ? 0 : 1);
+  process.exitCode = exitCode === 0 ? 0 : 1;
 }
 
 main().catch((error) => {
   console.error(`check-candidate: harness error: ${error?.stack ?? error}`);
-  process.exit(2);
+  process.exitCode = 2;
 });
