@@ -40,7 +40,12 @@ export function applyRate(cents, basisPoints) {
   if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {
     throw new TypeError('basisPoints must be a non-negative safe integer');
   }
-  return Math.floor((cents * basisPoints) / 10000);
+  const product = BigInt(cents) * BigInt(basisPoints);
+  const scale = 10000n;
+  const negative = product < 0n;
+  const magnitude = negative ? -product : product;
+  const rounded = (magnitude * 2n + scale) / (scale * 2n);
+  return Number(negative ? -rounded : rounded);
 }
 
 /**
@@ -60,9 +65,14 @@ export function allocate(totalCents, weights) {
   }
   const totalWeight = weights.reduce((sum, value) => sum + value, 0);
   const shares = weights.map((weight) => Math.floor((totalCents * weight) / totalWeight));
+  const remainders = weights.map((weight) => (totalCents * weight) % totalWeight);
   let assigned = shares.reduce((sum, value) => sum + value, 0);
   const remainder = totalCents - assigned;
-  shares[shares.length - 1] += remainder;
-  assigned += remainder;
+  const order = shares.map((_, index) => index);
+  order.sort((a, b) => (remainders[b] - remainders[a]) || (a - b));
+  for (let step = 0; step < remainder; step += 1) {
+    shares[order[step % order.length]] += 1;
+    assigned += 1;
+  }
   return { shares, assigned };
 }
