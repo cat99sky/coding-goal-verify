@@ -1,0 +1,27 @@
+== src/invoice.mjs sha256 (candidate object) ==
+06731915fb076976bdc5289c5c445f5c8c7f3058ce86b25bf2eb30c90c7aab58  -
+
+== gate files unchanged (baseline b76a25c vs candidate b0eb146 sha256) ==
+tools/accept.mjs baseline=e7c9031d075b3ac39a5be1df3801e05a09559bc294e8c205849da951b160fca7
+tools/accept.mjs candidate=e7c9031d075b3ac39a5be1df3801e05a09559bc294e8c205849da951b160fca7
+test/invoice.test.mjs baseline=61e411a515c6576cfec1a09837284be1d85874e68fbb99ca6922615eccf967d9
+test/invoice.test.mjs candidate=61e411a515c6576cfec1a09837284be1d85874e68fbb99ca6922615eccf967d9
+tools/check-candidate.mjs baseline=651f89f8f4bf23fb96e4b2039486f8820337cabc37d85817eb2ab7f2e8e7171c
+tools/check-candidate.mjs candidate=651f89f8f4bf23fb96e4b2039486f8820337cabc37d85817eb2ab7f2e8e7171c
+
+== changed files b76a25c..b0eb146 ==
+M	src/invoice.mjs
+
+== trees ==
+candidate=b8e95bd76813af2f1387b562d1e358b6bc49daed
+baseline=3c377b62652a84a586b679212894bc568900a509
+
+== candidate branch tip ==
+b0eb14656ba6682281fbed3ea83b3f8ad786fc54
+
+== clean-tree accept from git archive of b0eb146 ==
+accept: PASS (427 assertions)
+clean_accept_exit=0
+
+== -0 observation ==
+applyRate(-1,1)= -0 Object.is(-0)= true ==0: true isSafeInteger: true formatCents: 0.00 JSON: 0

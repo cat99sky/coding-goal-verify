@@ -1,0 +1,2 @@
+accept: PASS (427 assertions)
+accept_exit=0

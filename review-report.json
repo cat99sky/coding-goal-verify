@@ -1,0 +1,52 @@
+{
+  "goalId": "GOAL-VERIFY-07",
+  "stepId": "S-1",
+  "taskRevision": 1,
+  "round": 1,
+  "reviewerOperationId": "review:GOAL-VERIFY-07:r1",
+  "reviewerModel": "deepseek/deepseek-flash",
+  "reviewerProvider": "deepseek",
+  "candidateDigest": "1cc357ebb75325b4ae6c93c4b58ea63743761b5761d3d9bf11f60340f8f1cacc",
+  "verdict": "PASS",
+  "defects": [],
+  "coverage": {
+    "reviewed": [
+      "src/invoice.mjs (candidate b0eb146): applyRate replaced Math.floor((cents*bp)/10000) with magnitude=Math.abs(cents)*bp/10000, rounded=Math.floor(magnitude+0.5), sign re-applied via cents<0?-rounded:rounded; verified round-half-away-from-zero for both signs (review-evidence/contract-probe.txt, identity-and-gate.txt)",
+      "src/invoice.mjs applyRate correctness beyond accept.mjs: 968 exhaustive-ish checks against an exact BigInt half-away-from-zero reference over basisPoints {0,1,5,50,100,500,825,1000,1250,2500,3333,5000,9999,10000,20000} x cents {0..999999 incl. exact-half cases} x both signs -> 0 failures (review-evidence/contract-probe.txt)",
+      "src/invoice.mjs allocate largest-remainder: floors per line, computes integer remainders numerator%totalWeight, sorts by remainders desc with index asc tie-break, then distributes the leftover cents one per line -> verified sum-exact and ordering (review-evidence/contract-probe.txt)",
+      "src/invoice.mjs allocate randomized differential test: 5000 random cases (1-9 lines, weights 1-60, totals 0-999999) vs exact BigInt reference -> shares identical, sum===total, assigned===total, 0 failures (review-evidence/contract-probe.txt)",
+      "src/invoice.mjs allocate tie-break to earlier line: allocate(100,[1,1,1]) -> [34,33,33], allocate(100,[1,1,1,1,1,1]) -> [17,17,17,17,16,16], allocate(10,[1,2,3]) -> [2,3,5] (review-evidence/contract-probe.txt)",
+      "src/invoice.mjs allocate precision at large safe-integer totals (9007199254740991 with [3,7]; 999999999999 with [1,1,1]; 123456789123 with [13,17,19,23]) -> all sum exactly to totalCents (review-evidence/contract-probe.txt)",
+      "src/invoice.mjs parseCents/formatCents: unchanged by the candidate (only applyRate and allocate bodies differ in the diff) and still exercised by the passing accept group 1 and unit suite",
+      "tools/accept.mjs: byte-identical to baseline b76a25c, sha256 e7c9031d075b3ac39a5be1df3801e05a09559bc294e8c205849da951b160fca7 in both commits -> gate not weakened (review-evidence/identity-and-gate.txt)",
+      "test/invoice.test.mjs: byte-identical to baseline b76a25c, sha256 61e411a515c6576cfec1a09837284be1d85874e68fbb99ca6922615eccf967d9 in both commits -> tests not weakened (review-evidence/identity-and-gate.txt)",
+      "tools/check-candidate.mjs: byte-identical to baseline b76a25c, sha256 651f89f8f4bf23fb96e4b2039486f8820337cabc37d85817eb2ab7f2e8e7171c in both commits -> runner not weakened (review-evidence/identity-and-gate.txt)",
+      "Repository acceptance command: node tools/accept.mjs -> 'accept: PASS (427 assertions)', exit 0, both in the worktree and from a pristine git-archive extraction of b0eb146 (review-evidence/accept-out.txt, identity-and-gate.txt)",
+      "Repository unit suite: node --test test/*.test.mjs -> 3 tests, 3 pass, 0 fail, exit 0 (npm is unavailable in this sandbox, so the package.json script's literal command was run directly) (review-evidence/npm-test-out.txt)",
+      "Commit/branch identity: candidate branch warren/run_qbkf08hf8psd tip = b0eb14656ba6682281fbed3ea83b3f8ad786fc54, tree b8e95bd76813af2f1387b562d1e358b6bc49daed; baseline b76a25c tree 3c377b62652a84a586b679212894bc568900a509; diff b76a25c..b0eb146 touches exactly one file, M src/invoice.mjs (review-evidence/identity-and-gate.txt)",
+      "src/invoice.mjs candidate object sha256 = 06731915fb076976bdc5289c5c445f5c8c7f3058ce86b25bf2eb30c90c7aab58, matching the review input's declared file hash (review-evidence/identity-and-gate.txt)",
+      "README.md, package.json, .gitignore: unchanged by the candidate (diff b76a25c..b0eb146 lists only src/invoice.mjs) and not part of the acceptance contract, so no further inspection needed"
+    ],
+    "unreviewed": [],
+    "blockers": []
+  },
+  "interpretations": [
+    {
+      "source": "task acceptance condition 1 + src/invoice.mjs docblock",
+      "text": "applyRate must round half away from zero for either sign: the candidate computes the positive magnitude, rounds with Math.floor(magnitude+0.5), then re-applies the original sign. Verified exact (968 checks) against a BigInt half-away-from-zero reference, including exact-half inputs such as applyRate(150,500)=8 and applyRate(-150,500)=-8."
+    },
+    {
+      "source": "task acceptance condition 2 + src/invoice.mjs docblock",
+      "text": "allocate must sum exactly to totalCents and hand leftover cents to the largest fractional remainders with ties to the earlier line. Verified by 5000-case differential testing against an exact BigInt largest-remainder reference plus explicit tie cases; sum===totalCents and assigned===totalCents in all cases."
+    },
+    {
+      "source": "observation, judged benign",
+      "text": "applyRate(-1,1) returns negative zero (-0) because -Math.floor(0+0.5) yields -0 for a negative input that rounds to zero. This is not a contract violation: -0 === 0, Number.isSafeInteger(-0) is true, JSON.stringify(-0) is 0, String(-0) is '0', and formatCents(-0) renders '0.00'. It produces no observable money difference and accept.mjs compares via JSON.stringify, so the sign of zero is unobservable at the API boundary. Recorded as an observation, not a defect."
+    }
+  ],
+  "handoff": {
+    "conclusion": "PASS. Both planted defects in src/invoice.mjs are correctly fixed. applyRate now rounds half away from zero for positive and negative cents, matching tools/accept.mjs (968/968 checks against an exact BigInt reference, including exact-half and negative-half cases). allocate now uses the largest-remainder method with earlier-line tie-breaking and sums exactly to totalCents (5000/5000 randomized cases against an exact BigInt reference, plus explicit tie cases and large safe-integer totals). The gate files tools/accept.mjs, test/invoice.test.mjs and tools/check-candidate.mjs are byte-identical to baseline b76a25c, so the gate was not weakened. The candidate diff touches exactly one file (M src/invoice.mjs). The repository acceptance command exits 0 with 'accept: PASS (427 assertions)', confirmed both in the worktree and from a pristine git-archive extraction of the candidate commit; the unit suite is 3/3 pass. Candidate commit b0eb146 is the tip of the task branch warren/run_qbkf08hf8psd, tree matches the dispatch (b8e95bd76813af2f1387b562d1e358b6bc49daed), and the candidate object sha256 matches the dispatched file hash. No open defects.",
+    "next": "Merge/accept candidate commit b0eb14656ba6682281fbed3ea83b3f8ad786fc54. No further fix rounds required.",
+    "open": []
+  }
+}

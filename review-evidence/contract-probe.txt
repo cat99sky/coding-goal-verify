@@ -1,0 +1,18 @@
+== applyRate reference probe (exact BigInt half-away-from-zero) ==
+applyRate: 968 checks, 0 fails
+tie [1,1,1] 100 -> [34,33,33] exp [34,33,33]
+10/[1,2,3] -> [2,3,5]
+100/6x1 -> [17,17,17,17,16,16]
+allocate: 5000 checks, 0 fails
+big: {"shares":[35714,71429,107143,142857,178571,214286,250000],"assigned":1000000}
+
+== edge cases ==
+maxsafe/3,7: total=9007199254740991 sum=9007199254740991 ok=true shares=[2702159776422297,6305039478318694]
+1e12-1 /3: total=999999999999 sum=999999999999 ok=true shares=[333333333333,333333333333,333333333333]
+large spread: total=123456789123 sum=123456789123 ok=true shares=[22290809147,29149519654,32578874908,39437585414]
+rate max-ish: 9007199254740990
+rate -150,500: -8  150,500: 8
+rate 1,5000: 1  -1,5000: -1
+rate 3,5000: 2  -3,5000: -2
+neg zero? false -0
+allocate zero: {"shares":[0,0],"assigned":0}
