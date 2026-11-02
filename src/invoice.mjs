@@ -40,7 +40,11 @@ export function applyRate(cents, basisPoints) {
   if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {
     throw new TypeError('basisPoints must be a non-negative safe integer');
   }
-  return Math.floor((cents * basisPoints) / 10000);
+  const product = cents * basisPoints;
+  const magnitude = BigInt(Math.abs(product));
+  // Round half away from zero using integer arithmetic, then restore the sign.
+  const rounded = Number((magnitude + 5000n) / 10000n);
+  return product < 0 ? -rounded : rounded;
 }
 
 /**
@@ -59,10 +63,27 @@ export function allocate(totalCents, weights) {
     if (!Number.isSafeInteger(weight) || weight <= 0) throw new TypeError('weights must be positive safe integers');
   }
   const totalWeight = weights.reduce((sum, value) => sum + value, 0);
-  const shares = weights.map((weight) => Math.floor((totalCents * weight) / totalWeight));
-  let assigned = shares.reduce((sum, value) => sum + value, 0);
-  const remainder = totalCents - assigned;
-  shares[shares.length - 1] += remainder;
-  assigned += remainder;
+  const shares = [];
+  const remainders = [];
+  let assigned = 0;
+  for (let index = 0; index < weights.length; index += 1) {
+    // Integer division avoids floating-point drift in the proportional share.
+    const numerator = BigInt(totalCents) * BigInt(weights[index]);
+    const denominator = BigInt(totalWeight);
+    const share = Number(numerator / denominator);
+    shares.push(share);
+    assigned += share;
+    remainders.push({ index, remainder: numerator % denominator });
+  }
+  const leftover = totalCents - assigned;
+  // Largest fractional remainder first; ties go to the earlier line (stable sort).
+  const ranked = remainders
+    .slice()
+    .sort((a, b) => (a.remainder === b.remainder ? a.index - b.index : a.remainder > b.remainder ? -1 : 1));
+  for (let step = 0; step < leftover; step += 1) {
+    const { index } = ranked[step % ranked.length];
+    shares[index] += 1;
+    assigned += 1;
+  }
   return { shares, assigned };
 }
