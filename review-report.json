@@ -1,0 +1,30 @@
+{
+  "round": 1,
+  "goalId": "GOAL-VERIFY-06",
+  "stepId": "S-1",
+  "taskRevision": 1,
+  "candidateDigest": "07dc6ea3a1b6e47ea9802aa9567adb698b6c733499269ce80e7022652007c329",
+  "reviewerOperationId": "review:GOAL-VERIFY-06:r1",
+  "reviewerProvider": "warren-coding-host",
+  "reviewerModel": "pi-reviewer",
+  "verdict": "PASS",
+  "defects": [],
+  "coverage": {
+    "reviewed": [
+      "src/invoice.mjs applyRate (AC1): git cat-file -p 4ed328f:src/invoice.mjs shows product = cents*basisPoints, sign derived from product, return sign * Math.floor((Math.abs(product)+5000)/10000) -> magnitude-based half-away-from-zero; live probes: applyRate(150,500)=8, applyRate(-150,500)=-8, applyRate(-149,500)=-7, applyRate(-151,500)=-8, applyRate(1,5000)=1, applyRate(-1,5000)=-1 (evidence: review-evidence/src-invoice.diff)",
+      "src/invoice.mjs allocate (AC2): largest-remainder implemented via scaled = total*weight (integer domain), floor shares, remainders = scaled % totalWeight, order sorted by remainders[b]-remainders[a] || a-b (earlier-line tie-break), distributing the leftover cents one per line; live probes: allocate(100,[1,1,1]).shares=[34,33,33], allocate(2,[1,1,1]).shares=[1,1,0], allocate(7,[1,1,1]).shares=[3,2,2], allocate(10,[1,2,3]).shares=[2,3,5], allocate(100,[1,1,1,1,1,1,1]).shares=[15,15,14,14,14,14,14] assigned=100 (remainder larger than one cent handled)",
+      "tools/accept.mjs and test/ not weakened (AC3): git rev-parse b76a25c:tools/accept.mjs=3e25c86db8bdf03e167a985f3292624060c2290c equals 4ed328f:tools/accept.mjs; test/invoice.test.mjs base cd62af61... == candidate cd62af61...; package.json base a9c973ac... == candidate a9c973ac...; git diff --name-status b76a25c 4ed328f lists only 'M src/invoice.mjs'",
+      "Repository acceptance command passing on candidate commit (AC4): `node tools/accept.mjs` on tree 5653f51 -> 'accept: PASS (427 assertions)', exit=0 (review-evidence/accept.log); `node --test test/*.test.mjs` -> exit=0, 3 tests pass / 0 fail (review-evidence/unit-test.log)",
+      "README.md, .gitignore and other repo plumbing: unchanged between baseline and candidate (git diff --name-status shows only src/invoice.mjs) and not part of the acceptance contract",
+      "Candidate commit identity: git cat-file -p 4ed328f -> tree 5653f510e71669726591c0cd685e0ec8009f0a59, parent b76a25ca1d56ba673d00c730f2cbe4fca109807c; src/invoice.mjs blob sha256 932588a2653041084a72f0a9304c385b029dde73c463b70576228350ba64901f, matching the supplied diff input"
+    ],
+    "unreviewed": [],
+    "blockers": []
+  },
+  "interpretations": [],
+  "handoff": {
+    "conclusion": "PASS. All four acceptance conditions verified on candidate commit 4ed328f (tree 5653f51) by reading git objects, not the worktree. applyRate now rounds half away from zero for both signs; allocate implements largest-remainder with earlier-line tie-break and sums exactly to totalCents; tools/accept.mjs, test/ and package.json are byte-identical to the baseline; `node tools/accept.mjs` exits 0 with 427 passing assertions and the unit suite passes 3/3.",
+    "next": "Reap and push the task branch; no defects carried forward.",
+    "open": []
+  }
+}
