@@ -1,0 +1,53 @@
+{
+  "round": 1,
+  "verdict": "CHANGES_REQUESTED",
+  "candidateDigest": "54cbe0c95a5e14ffadaebb1cd411671252c415b72ef2595e102465c0aae9d1b0",
+  "goalId": "GOAL-VERIFY-08",
+  "stepId": "S-1",
+  "taskRevision": 2,
+  "reviewerOperationId": "review:GOAL-VERIFY-08:r1:i1bb91047-bfbd-47ad-8e6d-184862d3f63a:v2",
+  "reviewerModel": "deepseek/deepseek-flash",
+  "reviewerProvider": "deepseek",
+  "defects": [
+    {
+      "location": "src/invoice.mjs:39-44 (applyRate argument validation)",
+      "status": "open",
+      "trigger": "applyRate(cents, basisPoints) called with basisPoints > 10000, e.g. applyRate(100, 10001) or applyRate(1000, 15000)",
+      "reason": "applyRate only validates that basisPoints is a non-negative safe integer (`!Number.isSafeInteger(basisPoints) || basisPoints < 0`); there is no upper bound check. Acceptance condition 5 requires a TypeError for any rate above 100% (i.e. basisPoints > 10000), so rates above 100% are silently accepted and applied.",
+      "impact": "Contract violation of the authoritative acceptance condition 5: out-of-range rates are computed instead of rejected, so callers passing a percentage-by-mistake (10001, 15000, 1000000) get a silently inflated/deflated result. The repository gate (tools/accept.mjs) has no assertion for this bound, so a green gate does not cover it.",
+      "repro": "node --input-type=module -e \"import {applyRate} from './src/invoice.mjs'; console.log(applyRate(100,10001), applyRate(1000,15000))\" -> prints '100 1500' instead of throwing TypeError. See review-evidence/probe.log (basisPoints boundary probe: 10000=>1000, 10001=>1000, 10002=>1000, 15000=>1500, 1000000=>100000).",
+      "evidence": [
+        "git cat-file -p 455c42a:src/invoice.mjs | sha256sum => ad0235dcc741dcf380e971cc6c0d0e67983a9cbf446c1944314ad4aed44ed5a4 (matches the candidate identity in the review input)",
+        "git cat-file -p 455c42a:src/invoice.mjs | sed -n '36,46p' => guard is only: if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) { throw new TypeError('basisPoints must be a non-negative safe integer'); } — no basisPoints > 10000 check",
+        "review-evidence/probe.log: applyRate(100,10001) -> 100 ; applyRate(100,20000) -> 200 ; applyRate(-100,15000) -> -150 (no TypeError thrown)",
+        "review-evidence/probe.log (boundary probe): 10000 => 1000, 10001 => 1000, 10002 => 1000, 15000 => 1500, 1000000 => 100000 — all accepted",
+        "grep -n '10000\\|basisPoints' tools/accept.mjs test/invoice.test.mjs => only applyRate(10000, 825) usage at tools/accept.mjs:45 and test/invoice.test.mjs:14; no assertion rejects basisPoints > 10000, so the passing gate does not cover condition 5"
+      ]
+    }
+  ],
+  "coverage": {
+    "reviewed": [
+      "Acceptance condition 1 (applyRate rounds half away from zero, both signs): verified from the candidate git object. applyRate(150,500)=8, applyRate(-150,500)=-8, applyRate(149,500)=7, applyRate(-149,500)=-7, applyRate(50,500)=3, applyRate(-50,500)=-3, applyRate(25,2000)=5, applyRate(-25,2000)=-5 (review-evidence/probe.log); implementation rounds |product| with (magnitude+5000n)/10000n then restores sign. PASS.",
+      "Acceptance condition 2 (allocate sums exactly to totalCents, remainder to largest fractional remainders, ties to earlier line): allocate(10,[1,2,3])=[2,3,5], allocate(100,[1,1,1])=[34,33,33], allocate(100,[1,1,1,1,1,1])=[17,17,17,17,16,16], allocate(5,[1,1,1])=[2,2,1], allocate(1,[1,1,1])=[1,0,0], allocate(0,[5,7])=[0,0]; BigInt floor shares + descending remainder sort with index tie-break (review-evidence/probe.log). PASS.",
+      "Acceptance condition 3 (tools/accept.mjs and test/ not weakened): git diff b76a25c 455c42a over tools and test is empty; blob sha256 of tools/accept.mjs is e7c9031d075b3ac39a5be1df3801e05a09559bc294e8c205849da951b160fca7 at both 455c42a and b76a25c, and test/invoice.test.mjs is 61e411a515c6576cfec1a09837284be1d85874e68fbb99ca6922615eccf967d9 at both commits (byte-identical, unedited). PASS.",
+      "Acceptance condition 4 (candidate committed on the task branch and repository acceptance command passing): HEAD 455c42a79940f9485c1c8884bb5a99a2dd188303, tree 291f4c2efc70b01255b7b9f3e0f39c59b58c5838 (matches the stated candidate identity), working tree clean; node tools/accept.mjs on a clean export of 455c42a exits 0 with 'accept: PASS (427 assertions)' and node --test test/*.test.mjs exits 0 with 3/3 pass (review-evidence/accept.log, review-evidence/unit.log). PASS.",
+      "src/invoice.mjs parseCents/formatCents and the allocate/share plumbing were read in full from the candidate object; only the applyRate/allocate bodies changed vs baseline b76a25c (git diff), and both are covered by the runs above.",
+      "package.json (test/accept script wiring) read; no other source, config, or generated files exist in the repo (src/, test/, tools/, README.md), so there is no further acceptance-relevant surface."
+    ],
+    "unreviewed": [],
+    "blockers": [
+      "Acceptance condition 5 is unmet (see defect): applyRate accepts basisPoints > 10000 instead of throwing a TypeError."
+    ]
+  },
+  "interpretations": [
+    {
+      "source": "Acceptance condition 5 (authoritative review input)",
+      "text": "basisPoints > 10000 (rate above 100%) must throw a TypeError. The bound is on the basisPoints argument, so 10000 itself is valid (100%) and only values strictly greater than 10000 must throw. tools/accept.mjs contains no assertion for this bound, so the passing gate alone cannot establish condition 5 — it was checked directly against the candidate source."
+    }
+  ],
+  "handoff": {
+    "conclusion": "Conditions 1-4 are satisfied: rounding is half-away-from-zero for both signs, allocate ranks fractional remainders with ties to the earlier line and sums exactly, tools/accept.mjs and test/ are byte-identical to baseline, and the candidate commit 455c42a is committed with a green acceptance command (427 assertions) and unit suite (3/3). Condition 5 is NOT satisfied: applyRate has no upper bound on basisPoints, so applyRate(100, 10001) returns 100 and applyRate(1000, 15000) returns 1500 instead of throwing a TypeError. Verdict CHANGES_REQUESTED.",
+    "next": "Add an upper-bound guard in applyRate that throws TypeError when basisPoints > 10000 (keeping 10000 itself valid and leaving tools/accept.mjs and test/ untouched), then commit and re-run the acceptance command.",
+    "open": []
+  }
+}
