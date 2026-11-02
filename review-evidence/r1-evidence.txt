@@ -1,0 +1,19 @@
+### candidate identity
+735668b07269d77716976f60af110d93bf2e113c
+100644 blob 43af5c7e77ce331bd4ef1c28eda3ca05f5483b72	src/invoice.mjs
+9203430a41d04426297b3795a13ae39c7ed33dc49c3926d7bbd059f17ab57ec0  -
+
+### applyRate validation grep
+29:export function applyRate(cents, basisPoints) {
+31:  if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {
+32:    throw new TypeError('basisPoints must be a non-negative safe integer');
+34:  const numerator = cents * basisPoints;
+
+### gate/accept output (cand worktree @735668b)
+exit=0
+accept: PASS (427 assertions)
+
+### node --test
+exit=0
+# pass 3
+# fail 0

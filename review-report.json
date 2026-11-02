@@ -1,0 +1,47 @@
+{
+  "round": 1,
+  "goalId": "GOAL-VERIFY-09",
+  "stepId": "S-1",
+  "taskRevision": 2,
+  "candidateDigest": "f367e83752b6c440e587ccae1890ca82dca5075c70eec29284a970796b271a24",
+  "reviewerOperationId": "review:GOAL-VERIFY-09:r1:i8dd3b03a-0d55-4bfe-b8e7-bdd06cac76c2:v2",
+  "reviewerModel": "deepseek/deepseek-flash",
+  "reviewerProvider": "deepseek",
+  "verdict": "CHANGES_REQUESTED",
+  "defects": [
+    {
+      "status": "open",
+      "location": "src/invoice.mjs:29-37 (applyRate)",
+      "trigger": "applyRate(cents, basisPoints) called with basisPoints > 10000 (rate above 100%), e.g. applyRate(100, 10001) or applyRate(100, 20000)",
+      "repro": "node --input-type=module -e \"import {applyRate} from '<candidate>/src/invoice.mjs'; applyRate(100,10001)\"",
+      "reason": "Acceptance condition 5 requires applyRate to reject basisPoints > 10000 with a TypeError. The only basisPoints validation present is `if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) throw new TypeError('basisPoints must be a non-negative safe integer');`; there is no upper bound check. Observed behaviour from the candidate blob (735668b:src/invoice.mjs): applyRate(100000, 10001) => 100010, applyRate(100, 20000) => 200, applyRate(100, 10001) => 100 — all return numbers instead of throwing TypeError.",
+      "impact": "Rate values above 100% are silently accepted and applied, violating the authoritative validation contract. tools/accept.mjs does not currently exercise this case, so the acceptance gate still exits 0 and cannot catch this defect.",
+      "evidence": [
+        "git cat-file -p 735668b:src/invoice.mjs | grep -n basisPoints => '31:  if (!Number.isSafeInteger(basisPoints) || basisPoints < 0) {' / '32:    throw new TypeError(\"basisPoints must be a non-negative safe integer\");' / '34:  const numerator = cents * basisPoints;' (no >10000 guard)",
+        "node --input-type=module -e 'import {applyRate} from \"./src/invoice.mjs\"; applyRate(100000,10001)' => 100010",
+        "node --input-type=module -e 'import {applyRate} from \"./src/invoice.mjs\"; applyRate(100,20000)' => 200",
+        "node --input-type=module -e 'import {applyRate} from \"./src/invoice.mjs\"; applyRate(100,10001)' => 100",
+        "review-evidence/r1-evidence.txt"
+      ]
+    }
+  ],
+  "coverage": {
+    "reviewed": [
+      "src/invoice.mjs applyRate rounding half away from zero, positive and negative (AC1): verified via git object 735668b:src/invoice.mjs; observed applyRate(150,500)=8, applyRate(-150,500)=-8, applyRate(-149,500)=-7, applyRate(-151,500)=-8; accept.mjs group 2 checks pass",
+      "src/invoice.mjs allocate largest-remainder allocation and tie-to-earlier-line (AC2): observed allocate(10,[1,2,3])=[2,3,5] and allocate(100,[1,1,1])=[34,33,33]; accept.mjs group 3 and 200-round deterministic invariant group pass; assigned === total in all rounds",
+      "tools/accept.mjs and test/ unmodified vs baseline b76a25c (AC3): sha256 identical — tools/accept.mjs e7c9031d..., test/invoice.test.mjs 61e411a5..., tools/check-candidate.mjs 651f89f8...; git diff --name-only b76a25c 735668b lists only src/invoice.mjs",
+      "Acceptance command on candidate (AC4): `node tools/accept.mjs` in extracted candidate worktree => exit=0, 'accept: PASS (427 assertions)'; `node --test test/*.test.mjs` => exit=0, pass 3 fail 0",
+      "Commit identity (AC4): HEAD commit 735668b07269d77716976f60af110d93bf2e113c on warren/run_9stw3ds9y3ys; src/invoice.mjs blob sha256=9203430a41d04426297b3795a13ae39c7ed33dc49c3926d7bbd059f17ab57ec0 matches the stated change list",
+      "src/invoice.mjs applyRate basisPoints > 10000 TypeError validation (AC5): reviewed and found NOT implemented — see defect",
+      "src/invoice.mjs parseCents/formatCents (not part of AC1-AC5): reviewed as unchanged from baseline and exercised by accept group 1 which passes; no acceptance relevance beyond incidental coverage"
+    ],
+    "unreviewed": [],
+    "blockers": []
+  },
+  "interpretations": [],
+  "handoff": {
+    "conclusion": "AC1 (half-away-from-zero rounding for both signs), AC2 (largest-remainder allocation, ties to earlier line), AC3 (accept/test unmodified) and AC4 (candidate commit present, acceptance command exits 0) are satisfied. AC5 is not satisfied: applyRate accepts basisPoints > 10000 and returns a number instead of throwing TypeError — applyRate(100, 10001) => 100. Verdict CHANGES_REQUESTED.",
+    "next": "Add an upper-bound validation in applyRate, e.g. reject when basisPoints > 10000 with a TypeError, keeping the existing safe-integer/negative checks; then re-run `node tools/accept.mjs` and `node --test test/*.test.mjs` and commit on the task branch.",
+    "open": []
+  }
+}
